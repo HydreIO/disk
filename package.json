@@ -1,5 +1,5 @@
 {
-  "name": "@hydre/redisearch-graphql",
+  "name": "@hydre/disk",
   "version": "0.1.0",
   "description": "",
   "type": "module",
@@ -12,16 +12,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hydreio/redisearch-graphql.git"
+    "url": "git+https://github.com/hydreio/disk.git"
   },
   "author": "Hydre",
   "license": "UNLICENSE",
   "bugs": {
-    "url": "https://github.com/hydreio/redisearch-graphql/issues"
+    "url": "https://github.com/hydreio/disk/issues"
   },
   "keywords": [
     "redisearch",
-    "graphql",
+    "disk",
+    "redis",
     "hydre"
   ],
   "publishConfig": {
@@ -37,7 +38,7 @@
       "@babel/plugin-proposal-private-methods"
     ]
   },
-  "homepage": "https://github.com/hydreio/redisearch-graphql#readme",
+  "homepage": "https://github.com/hydreio/disk#readme",
   "dependencies": {
     "debug": "^4.1.1",
     "redis": "^3.0.2"
