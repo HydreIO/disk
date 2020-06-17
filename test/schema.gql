@@ -1,0 +1,13 @@
+type User @MAXTEXTFIELDS {
+  uuid    : ID!
+  name    : String! @TEXT @NOSTEM
+  address : String!
+  posts   : [Post!]!
+  cities  : [String!]! @TAG @SEPARATOR(sep: ",")
+}
+
+type Post @STOPWORDS(words: ["i", "know", "right"]) {
+  uuid   : ID!
+  date   : Int! @NUMERIC
+  text   : String @TEXT @WEIGHT(weight: 12.3)
+}

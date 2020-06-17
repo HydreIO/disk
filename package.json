@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "description": "",
   "type": "module",
+  "bin": {
+    "hydre-disk": "./bin/index.js"
+  },
   "scripts": {
     "test": "node --harmony-top-level-await --harmony-private-methods test/index.js",
     "coverage": "c8 --check-coverage node --harmony-top-level-await --harmony-private-methods test/index.js",
-    "lint": "prettier-eslint $PWD/\"**/*.js\" --print-width 60 --list-different && eslint --color .",
-    "format": "prettier-eslint $PWD/\"**/*.js\" --print-width 60 --write",
+    "lint": "prettier-eslint $PWD/\"**/*.js\" --print-width 80 --list-different && eslint --color .",
+    "format": "prettier-eslint $PWD/\"**/*.js\" --print-width 80 --write",
     "postversion": "git push && git push --tags"
   },
   "repository": {
@@ -41,7 +44,9 @@
   "homepage": "https://github.com/hydreio/disk#readme",
   "dependencies": {
     "debug": "^4.1.1",
-    "redis": "^3.0.2"
+    "graphql": "^15.1.0",
+    "redis": "^3.0.2",
+    "uuid": "^8.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.10.2",
