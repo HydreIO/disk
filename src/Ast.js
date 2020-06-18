@@ -32,7 +32,7 @@ const parse_option = directive => ({
 const serialize_option = ({ name, value }) => {
   if (value === undefined) return `${ name } `
   if (typeof value === 'string' && value.length > 1)
-    return `${ name } "${ value }" `
+    return [name, `"${ value }"`]
   if (Array.isArray(value)) {
     const words = value.map(word => `"${ word }"`).join(' ')
 
@@ -92,13 +92,8 @@ export default {
       index: { name: index_name, options: index_options },
       fields,
     } = ast
-    const options = index_options.map(serialize_option).join('')
-    const serialized_fields = fields
-        .map(serialize_field)
-        .join('')
-        .trim()
 
-    return `FT.CREATE ${ index_name } ${ options }SCHEMA ${ serialized_fields }`
+    return ['FT.CREATE', index_name, index_options.map(serialize_option).join(''), 'SCHEMA', ...fields.map(serialize_field)]
   },
 }
 

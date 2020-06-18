@@ -1,52 +1,67 @@
-import Debug from 'debug'
-import { call } from './redis.js'
-import Ast from './ast.js'
+import redis from 'redis'
+import Ast from './Ast.js'
+import Call from './Call.js'
 
-const debug = Debug('disk').extend('sync')
-const index_hashes = async (namespace, cursor, count) => {
-  const query = `SCAN ${ cursor } MATCH ${ namespace }:* COUNT ${ count }`
-  const [next_cursor, documents] = await call(query)
+redis.addCommand('FT.ADDHASH')
+redis.addCommand('FT.INFO')
+redis.addCommand('FT.CREATE')
 
-  if (documents.length) {
-    debug(
-        `${ ' '.repeat(namespace.length) }  -> indexing %O hashes in index %O`,
-        documents.length,
-        namespace,
-    )
-  } else {
-    debug(
-        `${ ' '.repeat(namespace.length) }  -> no documents under %O`,
-        namespace,
-    )
-  }
-
-  for (const document of documents)
-    await call(`FT.ADDHASH ${ namespace } ${ document } 1.0 REPLACE`)
-  if (+next_cursor) await index_hashes(namespace, next_cursor, count)
-}
-
-export default async (schema, scan_count) => {
+export default async (url, schema, scan_count) => {
   if (!schema) throw new Error('No schema was provided')
 
-  debug('Synchronizing schema..')
+  const client = redis.createClient({
+    url,
+    retry_strategy: ({ attempt, error }) => {
+      console.log('[redis]', error)
+      if (attempt > 10)
+        return new Error(`Can't connect to redis after ${ attempt } tries..`)
+
+      return 250 * 2 ** attempt
+    },
+  })
+  const call = Call(client)
+  const index_hashes = async (namespace, cursor, count) => {
+    const query = ['SCAN', cursor, 'MATCH', `${ namespace }:*`, 'COUNT', count]
+    const [[next_cursor, documents]] = await call([query])
+
+    if (documents.length) {
+      console.log(`${ ' '.repeat(namespace.length) }  \
+  -> indexing ${ documents.length } hashes in index ${ namespace }`)
+    } else {
+      console.log(`${ ' '.repeat(namespace.length) }  \
+  -> no documents under ${ namespace }`)
+    }
+
+    const serialize = document =>
+      ['FT.ADDHASH', namespace, document, '1.0', 'REPLACE']
+
+    await call(documents.map(serialize))
+    if (+next_cursor) await index_hashes(namespace, next_cursor, count)
+  }
+
+  await new Promise(resolve => {
+    client.on('ready', resolve)
+  })
+
+  console.log('Synchronizing schema..')
   for (const ast of Ast.from_graphql(schema)) {
     const {
       index: { name },
     } = ast
-    const log = debug.extend(name)
 
-    log('processing..')
+    console.log(`[${ name }] processing..`)
     try {
-      await call(`FT.INFO ${ name }`)
-      log('Already exist, skipping..')
+      await call([['FT.INFO', name]])
+      console.log(`[${ name }] Already exist, skipping..`)
     } catch (error) {
       if (error.message !== 'Unknown Index name') {
-        log('Unable to retrieves infos about index, aborting..')
+        console.log(`[${ name }] Unable to retrieves \
+infos about index, aborting..`)
         throw error
       }
 
-      log('Creating.. (batch: %O)', scan_count)
-      await call(Ast.to_query(ast))
+      console.log(`[${ name }] Creating.. (batch: ${ scan_count })`)
+      await call([Ast.to_query(ast)])
       await index_hashes(name, 0, scan_count)
     }
   }
