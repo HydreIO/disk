@@ -1,11 +1,10 @@
 import { v4 as uuid4 } from 'uuid'
-import { Node } from './resp.js'
+import Parser from './Parser.js'
 import Call from './Call.js'
 
 const search_missing = () => {
   throw new Error('Missing search field in query')
 }
-const assign_if = (condition, value) => condition ? value : []
 const build_query = (
     namespace,
     { keys, fields, limit = 0, offset = 0, search = search_missing() } = {},
@@ -14,18 +13,23 @@ const build_query = (
   namespace,
   search,
   ...keys ? ['INKEYS', keys.length, keys] : [],
-  ...fields ? ['INFIELDS', fields.length, fields] : [],
+  ...fields
+    ? ['INFIELDS', fields.length, fields, 'RETURN', fields.length, fields]
+    : [],
   ...limit > 0 ? ['LIMIT', offset, Math.min(1, limit)] : [],
 ]
 const proxify = handle =>
   new Proxy(Object.create(null), {
-    get: (_, namespace) => (query, upsert) =>
-      handle(namespace, query ?? upsert, upsert),
+    get: (_, namespace) => payload => handle(namespace, payload),
   })
 
-export default client => {
+export default ({
+  client,
+  events_enabled = false,
+  events_name = '__disk__',
+}) => {
   const call = Call(client)
-  const keys = async (namespace, query) => {
+  const keys = async (namespace, { query }) => {
     const [, ids] = await call.one([build_query(namespace, query), 'NOCONTENT'])
 
     return ids
@@ -33,7 +37,7 @@ export default client => {
 
   return {
     KEYS  : proxify(keys),
-    CREATE: proxify(async (namespace, upsert) => {
+    CREATE: proxify(async (namespace, { document }) => {
       const uuid = `${ namespace }:${ uuid4() }`
 
       await call.one([
@@ -42,25 +46,51 @@ export default client => {
         uuid,
         1,
         'FIELDS',
-        Object.entries(upsert),
+        Object.entries(document),
       ])
+      if (events_enabled) {
+        await call.one([
+          'publish',
+          `${ events_name }:CREATE:${ namespace }`,
+          uuid,
+        ])
+      }
+
       return uuid
     }),
-    GET: proxify(async (namespace, query) => {
+    GET: proxify(async (namespace, { query }) => {
       const [, ...results] = await call.one(build_query(namespace, query))
 
-      return Node.parse_search(results)
+      return Parser.array_result(results)
     }),
-    SET: proxify(async (namespace, query, upsert) => {
+    SET: proxify(async (namespace, { query, document }) => {
       const ids = await keys(namespace, query)
-      const inline_fields = Node.serialize(upsert)
-      const query_start = `FT.ADD ${ namespace }`
-      const query_end = `1 FIELDS ${ inline_fields } REPLACE PARTIAL`
+      const head = ['FT.ADD', namespace]
+      const tail = [1, 'FIELDS', Object.entries(document), 'REPLACE', 'PARTIAL']
+      const result = await call.many(ids.map(id => [...head, id, ...tail]))
 
-      return call(ids.map(id => `${ query_start } ${ id } ${ query_end }`))
+      if (events_enabled) {
+        await call.many(ids.map(id => [
+          'publish',
+          `${ events_name }:SET:${ namespace }`,
+          id,
+        ]))
+      }
+
+      return result
     }),
-    DELETE: proxify((namespace, query) =>
-      keys(namespace, query).then(ids =>
-        call(ids.map(id => `FT.DEL ${ namespace } ${ id } DD`)))),
+    DELETE: proxify(async (namespace, { query }) => {
+      const ids = await keys(namespace, query)
+
+      if (events_enabled) {
+        await call.many(ids.map(id => [
+          'publish',
+          `${ events_name }:DELETE:${ namespace }`,
+          id,
+        ]))
+      }
+
+      return call.many(ids.map(id => ['FT.DEL', namespace, id, 'DD']))
+    }),
   }
 }

@@ -60,6 +60,7 @@ hydre-disk --file ./schema.gql --scan-count 1000
 | --- | ---|---|
 | `--file` | Error (mandatory) | direct path to a graphql schema file which contain your types |
 | `--scan-count` | `100` | `COUNT` using while scanning redis for keys when reindexing hashes in an updated indexe @see https://redis.io/commands/scan|
+| `--redis` | `'redis://localhost:6379'` | redis url |
 
 Synchronization steps (current version)
 
@@ -158,4 +159,25 @@ FT.CREATE Post STOPWORDS "i" "know" "right" SCHEMA date NUMERIC text TEXT WEIGHT
 ### With Node
 
 ```js
+import redis from 'redis'
+
+redis.addCommand('FT.ADD')
+redis.addCommand('FT.SEARCH')
+redis.addCommand('FT.CREATE')
+redis.addCommand('FT.DEL')
+
+const client = redis.createClient({
+  url           : 'redis://localhost:6379',
+  retry_strategy: ({ attempt, error }) => {
+    console.log('[redis]', error)
+    if (attempt > 10)
+      return new Error(`Can't connect to redis after ${ attempt } tries..`)
+
+    return 250 * 2 ** attempt
+  },
+})
+
+await new Promise(resolve => {
+  client.on('ready', resolve)
+})
 ```

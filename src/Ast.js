@@ -1,25 +1,12 @@
 import { parse } from 'graphql/index.mjs'
 
-const MULTIPART = new Set(['PHONETIC', 'WEIGHT', 'SEPARATOR'])
 const FIELD_TYPES = new Set(['TEXT', 'NUMERIC', 'GEO', 'TAG'])
-const extract_multipart_options = function *(options) {
-  const clone = [...options]
-
-  while (clone.length) {
-    const next = clone.shift()
-
-    yield {
-      name: next,
-      ...MULTIPART.has(next) && { value: clone.shift() },
-    }
-  }
-}
 const parse_name = ({ name: { value } }) => value
 const drop_invalid_field = ({ directives }) =>
   directives.length && FIELD_TYPES.has(parse_name(directives[0]))
 const Option = {
   parse: directive => {
-    const [value] = directive.arguments.map(argument => {
+    const [option_value] = directive.arguments.map(argument => {
       const {
         value: { kind: argument_type, value, values },
       } = argument
@@ -31,7 +18,7 @@ const Option = {
 
     return {
       name: parse_name(directive),
-      ...value && { value },
+      ...option_value && { value: option_value },
     }
   },
   serialize: ({ name, value }) => {
