@@ -5,6 +5,7 @@ redis.addCommand('FT.ADD')
 redis.addCommand('FT.SEARCH')
 redis.addCommand('FT.CREATE')
 redis.addCommand('FT.DEL')
+redis.debug_mode = true
 
 const client = redis.createClient({
   url           : 'redis://localhost:6379',
@@ -23,21 +24,25 @@ await new Promise(resolve => {
 
 const Disk = Mount(client)
 
-// console.log(await Disk.CREATE.Post({
-//   date: Date.now(),
-//   text: `Lorem ipsum dolor sit amet,
-// consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
-// labore et dolore magna aliqua. Ut enim ad minim veniam,
-// quis nostrud exercitation
-// ullamco laboris nisi ut aliquip ex ea commodo consequat.
-// Duis aute irure dolor in
-// reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-// Excepteur sint occaecat cupidatat non proident,
-// sunt in culpa qui officia deserunt mollit anim id est laborum.`,
-// }))
-console.dir(await Disk.GET.Post({
-  search: 'sint*',
-}), {
-  depth : Infinity,
-  colors: true,
-})
+console.log(await Disk.CREATE.Post({
+  date: Date.now(),
+  age : 1984889416754265467842654256261n,
+  text: `Lorem ipsum dolor sit amet,
+consectetur adipiscing elit, sed do eiusmod tempor incididunt ut
+labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation
+ullamco laboris nisi ut aliquip ex ea commodo consequat.
+Duis aute irure dolor in
+reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+Excepteur sint occaecat cupidatat non proident,
+sunt in culpa qui officia deserunt mollit anim id est laborum.`,
+}))
+console.dir(
+    await Disk.GET.Post({
+      search: 'sint*',
+    }),
+    {
+      depth : Infinity,
+      colors: true,
+    },
+)

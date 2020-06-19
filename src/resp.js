@@ -36,7 +36,7 @@ const Value = {
   parse    : value => JSON.parse(value, reviver),
 }
 const Entry = {
-  serialize: ([key, value]) => `${ key } ${ Value.serialize(value) }`,
+  serialize: ([key, value]) => [key, Value.serialize(value)],
   parse    : ([key, value]) => ({ [key]: Value.parse(value) }),
 }
 const result_reducer = parse => (result, current, index, array) => {
@@ -49,8 +49,14 @@ const result_reducer = parse => (result, current, index, array) => {
 
 export const Node = {
   parse       : array => array.reduce(result_reducer(Entry.parse), {}),
-  parse_search: array => array.reduce(result_reducer(Node.parse), {}),
-  serialize   : object =>
+  parse_search: array => {
+    console.dir(array, {
+      depth : Infinity,
+      colors: true,
+    })
+    return array.reduce(result_reducer(Node.parse), {})
+  },
+  serialize: object =>
     Object.entries(object)
         .map(Entry.serialize)
         .join(' '),

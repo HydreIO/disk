@@ -54,7 +54,7 @@
     "@babel/plugin-proposal-numeric-separator": "^7.10.1",
     "@babel/plugin-proposal-private-methods": "^7.10.1",
     "@hydre/doubt": "^6.1.0",
-    "@sidy/eslint-config-sidy": "^1.4.12",
+    "@sidy/eslint-config-sidy": "^1.4.13",
     "babel-eslint": "^11.0.0-beta.2",
     "c8": "^7.2.0",
     "eslint": "^7.2.0",

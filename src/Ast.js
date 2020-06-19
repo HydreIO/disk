@@ -17,83 +17,61 @@ const extract_multipart_options = function *(options) {
 const parse_name = ({ name: { value } }) => value
 const drop_invalid_field = ({ directives }) =>
   directives.length && FIELD_TYPES.has(parse_name(directives[0]))
-const parse_option = directive => ({
-  name : parse_name(directive),
-  value: directive.arguments.map(argument => {
-    const {
-      value: { kind: argument_type, value, values },
-    } = argument
+const Option = {
+  parse: directive => {
+    const [value] = directive.arguments.map(argument => {
+      const {
+        value: { kind: argument_type, value, values },
+      } = argument
 
-    if (argument_type === 'ListValue') return values.map(_ => _.value)
-    if (argument_type === 'StringValue') return value
-    return +value
-  })[0],
-})
-const serialize_option = ({ name, value }) => {
-  if (value === undefined) return `${ name } `
-  if (typeof value === 'string' && value.length > 1)
-    return [name, `"${ value }"`]
-  if (Array.isArray(value)) {
-    const words = value.map(word => `"${ word }"`).join(' ')
+      if (argument_type === 'ListValue') return values.map(_ => _.value)
+      if (argument_type === 'StringValue') return value
+      return +value
+    })
 
-    return `${ name } ${ value.length } ${ words } `
-  }
-
-  return `${ name } ${ value } `
+    return {
+      name: parse_name(directive),
+      ...value && { value },
+    }
+  },
+  serialize: ({ name, value }) => {
+    if (value === undefined) return [name]
+    if (Array.isArray(value)) return [name, value.length, value]
+    return [name, value]
+  },
 }
-const parse_field = field => ({
-  name   : parse_name(field),
-  options: field.directives.map(parse_option),
-})
-const serialize_field = ({ name, options }) =>
-  `${ name } ${ options
-      .map(serialize_option)
-      .join('')
-      .trim() } `
+const Field = {
+  parse: field => ({
+    name   : parse_name(field),
+    options: field.directives.map(Option.parse),
+  }),
+  serialize: ({ name, options }) => [name, options.map(Option.serialize)],
+}
 
 export default {
-  from_graphql: schema =>
+  parse: schema =>
     parse(schema)
         .definitions.map(definition => ({
           index: {
             name   : parse_name(definition),
-            options: definition.directives.map(parse_option),
+            options: definition.directives.map(Option.parse),
           },
-          fields: definition.fields.filter(drop_invalid_field).map(parse_field),
+          fields: definition.fields.filter(drop_invalid_field).map(Field.parse),
         }))
         .filter(({ fields }) => fields.length),
-  from_array_response: ([
-    ,
-    index_name,
-    ,
-    index_options,
-    ,
-    fields, ...rest
-  ]) => ({
-    index: {
-      name   : index_name,
-      options: [
-        ...rest
-            .filter(name => name === 'stopwords_list')
-            .map(words => ({
-              name : 'STOPWORDS',
-              value: words,
-            })),
-        ...index_options.map(name => ({ name })),
-      ],
-    },
-    fields: fields.map(([field_name, , ...field_options]) => ({
-      name   : field_name,
-      options: [...extract_multipart_options(field_options)],
-    })),
-  }),
-  to_query: ast => {
+  serialize: ast => {
     const {
       index: { name: index_name, options: index_options },
       fields,
     } = ast
 
-    return ['FT.CREATE', index_name, index_options.map(serialize_option).join(''), 'SCHEMA', ...fields.map(serialize_field)]
+    return [
+      'FT.CREATE',
+      index_name,
+      index_options.map(Option.serialize),
+      'SCHEMA',
+      ...fields.map(Field.serialize),
+    ].flat(Infinity)
   },
 }
 

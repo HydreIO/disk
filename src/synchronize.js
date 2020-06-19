@@ -22,7 +22,7 @@ export default async (url, schema, scan_count) => {
   const call = Call(client)
   const index_hashes = async (namespace, cursor, count) => {
     const query = ['SCAN', cursor, 'MATCH', `${ namespace }:*`, 'COUNT', count]
-    const [[next_cursor, documents]] = await call([query])
+    const [next_cursor, documents] = await call.one(query)
 
     if (documents.length) {
       console.log(`${ ' '.repeat(namespace.length) }  \
@@ -32,10 +32,15 @@ export default async (url, schema, scan_count) => {
   -> no documents under ${ namespace }`)
     }
 
-    const serialize = document =>
-      ['FT.ADDHASH', namespace, document, '1.0', 'REPLACE']
+    const serialize = document => [
+      'FT.ADDHASH',
+      namespace,
+      document,
+      '1.0',
+      'REPLACE',
+    ]
 
-    await call(documents.map(serialize))
+    await call.many(documents.map(serialize))
     if (+next_cursor) await index_hashes(namespace, next_cursor, count)
   }
 
@@ -44,14 +49,14 @@ export default async (url, schema, scan_count) => {
   })
 
   console.log('Synchronizing schema..')
-  for (const ast of Ast.from_graphql(schema)) {
+  for (const ast of Ast.parse(schema)) {
     const {
       index: { name },
     } = ast
 
     console.log(`[${ name }] processing..`)
     try {
-      await call([['FT.INFO', name]])
+      await call.one(['FT.INFO', name])
       console.log(`[${ name }] Already exist, skipping..`)
     } catch (error) {
       if (error.message !== 'Unknown Index name') {
@@ -61,7 +66,7 @@ infos about index, aborting..`)
       }
 
       console.log(`[${ name }] Creating.. (batch: ${ scan_count })`)
-      await call([Ast.to_query(ast)])
+      await call.one(Ast.serialize(ast))
       await index_hashes(name, 0, scan_count)
     }
   }
