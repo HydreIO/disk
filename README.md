@@ -12,7 +12,7 @@
 <h3 align=center>Store and query your GraphQL types in Redis</h3>
 
 <p align=center>
-  <img src="https://i.imgur.com/d1xlbYG.png" />
+  <img src="https://i.imgur.com/SxjQfSU.png" />
 </p>
 
 
