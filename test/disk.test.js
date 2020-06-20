@@ -156,7 +156,7 @@ export default async (doubt, send, client) => {
     call.foo()
     await call.many([['HMGET']])
   } catch ({ errors }) {
-    doubt['[disk] Call method allows simple errir catching']({
+    doubt['[disk] Call method allows simple error catching']({
       because: errors[0].message,
       is     : `ERR wrong number of arguments for 'hmget' command`,
     })
