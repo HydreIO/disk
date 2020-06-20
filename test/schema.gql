@@ -1,6 +1,7 @@
 type User @MAXTEXTFIELDS {
   uuid    : ID!
-  name    : String! @TEXT @NOSTEM
+  name    : String! @TEXT @NOSTEM,
+  age     : Int @NUMERIC
   address : String!
   posts   : [Post!]!
   cities  : [String!]! @TAG @SEPARATOR(sep: ",")

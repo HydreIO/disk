@@ -13,7 +13,7 @@ const build_query = (
   namespace,
   search,
   ...keys ? ['INKEYS', keys.length, keys] : [],
-  ...fields
+  ...fields?.length
     ? ['INFIELDS', fields.length, fields, 'RETURN', fields.length, fields]
     : [],
   ...limit > 0 ? ['LIMIT', offset, Math.min(1, limit)] : [],
@@ -27,10 +27,13 @@ export default ({
   client,
   events_enabled = false,
   events_name = '__disk__',
-}) => {
+} = {}) => {
   const call = Call(client)
-  const keys = async (namespace, { query }) => {
-    const [, ids] = await call.one([build_query(namespace, query), 'NOCONTENT'])
+  const keys = async (namespace, { query } = {}) => {
+    const [, ...ids] = await call.one([
+      build_query(namespace, query),
+      'NOCONTENT',
+    ])
 
     return ids
   }
@@ -49,11 +52,9 @@ export default ({
         Object.entries(document),
       ])
       if (events_enabled) {
-        await call.one([
-          'publish',
-          `${ events_name }:CREATE:${ namespace }`,
-          uuid,
-        ])
+        const cmd = ['publish', `${ events_name }:CREATE:${ namespace }`, uuid]
+
+        await call.one(cmd)
       }
 
       return uuid
@@ -63,31 +64,35 @@ export default ({
 
       return Parser.array_result(results)
     }),
-    SET: proxify(async (namespace, { query, document }) => {
-      const ids = await keys(namespace, query)
+    SET: proxify(async (namespace, { query, document = {} }) => {
+      const ids = await keys(namespace, { query })
       const head = ['FT.ADD', namespace]
-      const tail = [1, 'FIELDS', Object.entries(document), 'REPLACE', 'PARTIAL']
+      const tail = [1, 'REPLACE', 'PARTIAL', 'FIELDS', Object.entries(document)]
       const result = await call.many(ids.map(id => [...head, id, ...tail]))
 
       if (events_enabled) {
-        await call.many(ids.map(id => [
+        const to_operation = id => [
           'publish',
           `${ events_name }:SET:${ namespace }`,
           id,
-        ]))
+        ]
+
+        await call.many(ids.map(to_operation))
       }
 
       return result
     }),
     DELETE: proxify(async (namespace, { query }) => {
-      const ids = await keys(namespace, query)
+      const ids = await keys(namespace, { query })
 
       if (events_enabled) {
-        await call.many(ids.map(id => [
+        const to_operation = id => [
           'publish',
           `${ events_name }:DELETE:${ namespace }`,
           id,
-        ]))
+        ]
+
+        await call.many(ids.map(to_operation))
       }
 
       return call.many(ids.map(id => ['FT.DEL', namespace, id, 'DD']))
