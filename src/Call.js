@@ -1,3 +1,8 @@
+import debug from 'debug'
+import { inspect } from 'util'
+
+const log = debug('disk')
+
 export default client =>
   new Proxy(
       {},
@@ -8,6 +13,8 @@ export default client =>
               return new Promise((resolve, reject) => {
                 const [command, ...parameters] = queries.flat(Infinity)
 
+                log.extend('one')('%O', [command, ...parameters])
+
                 client.send_command(command, parameters, (error, result) => {
                   if (error) reject(error)
                   else resolve(result)
@@ -17,6 +24,8 @@ export default client =>
             case 'many':
               return new Promise((resolve, reject) => {
                 const flat = queries.map(query => query.flat(Infinity))
+
+                log.extend('many')(inspect(flat, false, Infinity, true))
 
                 client.multi(flat).exec((error, results) => {
                   if (error) {
