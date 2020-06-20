@@ -1,11 +1,12 @@
 {
   "name": "@hydre/disk",
   "version": "0.1.0",
-  "description": "",
+  "description": "Store and query your GraphQL types in Redis",
   "type": "module",
   "bin": {
     "hydre-disk": "./bin/index.js"
   },
+  "main": "src/Disk.js",
   "scripts": {
     "test": "node --harmony-top-level-await test/index.js",
     "coverage": "c8 --check-coverage node --harmony-top-level-await --harmony-private-methods test/index.js",
@@ -43,7 +44,6 @@
   },
   "homepage": "https://github.com/hydreio/disk#readme",
   "dependencies": {
-    "debug": "^4.1.1",
     "graphql": "^15.1.0",
     "redis": "^3.0.2",
     "uuid": "^8.1.0"

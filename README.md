@@ -167,6 +167,7 @@ Add these commands to `node-redis` and provide your client
 
 ```js
 import redis from 'redis'
+import Mount from '@hydre/disk'
 
 redis.addCommand('FT.ADD')
 redis.addCommand('FT.SEARCH')
@@ -174,11 +175,24 @@ redis.addCommand('FT.CREATE')
 redis.addCommand('FT.DEL')
 
 const client = redis.createClient()
+const Disk   = Mount({
+  client,
+  events_enabled: true,
+  events_name   : '__disk__',
+})
 
 await new Promise(resolve => {
   client.on('ready', resolve)
 })
 ```
+
+If events are enabled Disk will publish to redis every CREATE, SET, and DELETE
+operations in a similar way as keyevent-notifications
+
+`PUBLISH "<events_name>:<operation_type>:<index_name>" <uuid>`
+
+ex: `PUBLISH __disk__:CREATE:User User:xxxx-xxxx-xxxx-xxxx`
+which you can listen all through `PSUBSCRIBE __disk__:*:*`
 
 here is a example of connexion retry backoff client
 
