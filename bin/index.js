@@ -27,5 +27,5 @@ const client = redis.createClient({
   },
 })
 
-await sync(redis_url, schema, count)
+await sync(client, redis_url, schema, count)
 process.exit(0)
