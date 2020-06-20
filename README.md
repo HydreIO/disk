@@ -21,6 +21,11 @@
 - [Usage](#usage)
   - [Schema](#schema)
   - [With Node](#with-node)
+    - [CREATE](#create)
+    - [DELETE](#delete)
+    - [KEYS](#keys)
+    - [GET](#get)
+    - [SET](#set)
 
 ## Requirements
 
@@ -158,6 +163,8 @@ FT.CREATE Post STOPWORDS "i" "know" "right" SCHEMA date NUMERIC text TEXT WEIGHT
 
 ### With Node
 
+Add these commands to `node-redis` and provide your client
+
 ```js
 import redis from 'redis'
 
@@ -166,18 +173,114 @@ redis.addCommand('FT.SEARCH')
 redis.addCommand('FT.CREATE')
 redis.addCommand('FT.DEL')
 
-const client = redis.createClient({
-  url           : 'redis://localhost:6379',
-  retry_strategy: ({ attempt, error }) => {
-    console.log('[redis]', error)
-    if (attempt > 10)
-      return new Error(`Can't connect to redis after ${ attempt } tries..`)
-
-    return 250 * 2 ** attempt
-  },
-})
+const client = redis.createClient()
 
 await new Promise(resolve => {
   client.on('ready', resolve)
 })
+```
+
+here is a example of connexion retry backoff client
+
+```js
+const client = redis.createClient({
+  url           : 'redis://localhost:6379',
+  retry_strategy: ({ attempt, error }) => {
+    if (attempt > 10)
+      return new Error(`Can't connect to redis after ${ attempt } tries..`)
+    return 250 * 2 ** attempt
+  },
+})
+```
+
+When using the disk you must follow this pattern
+
+```js
+Disk[<operation>][<type>]({ query, document })
+```
+
+- **operation** is one of
+  - `CREATE`
+  - `DELETE`
+  - `KEYS`
+  - `GET`
+  - `SET`
+- **type** is the namespace, which is the graphql type name.
+  It is used for the collection name (index) and the node namespace.
+  A `type User` would yield an `User` redisearch index and `User:<uuid>`
+  documents. Basically `FT.ADD User User:xxxx 1 FIELDS ...`
+- **query** is a query option as the following
+  ```js
+  query: {
+    // array of uuids to use instead of the whole database (INKEYS)
+    // if not specified it will use the whole index
+    keys  : [''],
+    // array of field names to use
+    // for the query and also return only those (INFIELDS, RETURN)
+    // if not specified it will use all fields
+    fields: [''],
+    limit : Infinity, // limit results
+    offset: 0, // paginate
+    search: '' // redisearch query string (https://oss.redislabs.com/redisearch/Query_Syntax/)
+  }
+  ```
+- **document** object to use for CREATE and SET operations
+  - it use `REPLACE PARTIAL` for a SET operation
+
+
+#### CREATE
+
+Create will generate an uuid v4 and use it with the type as a namespace
+
+```js
+const uuid = await Disk.CREATE.User({ document: pepeg })
+// User:xxxx-xxxx-xxx..
+```
+
+#### DELETE
+
+Delete matching documents from redis (DD)
+
+```js
+const result = await Disk.DELETE.User({ query: { search: '*' } })
+// result = raw result with an array of 'OK' (converted to `1` by node-redis)
+```
+
+#### KEYS
+
+Return an array of matching keys (NOCONTENT),
+can be used to count element or check for existence
+
+```js
+const [key1, key2, ...keys] = await Disk.KEYS.User({ query: { search: '*' } })
+```
+
+#### GET
+
+Return an array of javascript object
+
+> note that redis only returns strings, Disk will convert back
+> so any `'1'` will be converted to a Number, `'true'` to a boolean.
+> Big numbers will be converted to native BigInts
+
+```js
+const Paul = await Disk.GET.User({
+  query: {
+    fields: ['name', 'age'],
+    search: '@name:Paul',
+    limit : 1
+  }
+})
+```
+
+#### SET
+
+Merge a document into all matching results
+
+```js
+const result = await Disk.SET.User({
+  query   : { search: '*' },
+  document: { group : 'communism' }
+})
+// result = raw redis array result (FT.ADD)
 ```
