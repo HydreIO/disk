@@ -1,6 +1,6 @@
 {
   "name": "@hydre/disk",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Store and query your GraphQL types in Redis",
   "type": "module",
   "bin": {
