@@ -20,7 +20,7 @@ const schema                = readFileSync(file, 'utf-8')
 if (!file) throw new Error('Please provide a schema with the --file flag')
 
 const client = redis.createClient({
-  url,
+  url           : redis_url,
   retry_strategy: ({ attempt }) => {
     if (attempt > 10) return new Error(`Can't connect to redis after ${ attempt } tries..`)
     return 250 * 2 ** attempt
