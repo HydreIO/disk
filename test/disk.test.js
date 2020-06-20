@@ -35,16 +35,14 @@ export default async (doubt, send, client) => {
     is     : 0,
   })
   doubt['[disk] Keys give back 2 uuids']({
-    because: (await Disk.KEYS.User({ query: { search: '*' } })).length,
+    because: (await Disk.KEYS.User({ search: '*' })).length,
     is     : 2,
   })
   doubt['[disk] Keys limited to 1 give back 1 uuids']({
     because: (
       await Disk.KEYS.User({
-        query: {
-          search: '*',
-          limit : 1,
-        },
+        search: '*',
+        limit : 1,
       })
     ).length,
     is: 1,
@@ -52,20 +50,16 @@ export default async (doubt, send, client) => {
   doubt['[disk] Keys limited to 0 give back 2 uuids']({
     because: (
       await Disk.KEYS.User({
-        query: {
-          search: '*',
-          limit : 0,
-        },
+        search: '*',
+        limit : 0,
       })
     ).length,
     is: 2,
   })
 
   const [finding_alger] = await Disk.GET.User({
-    query: {
-      search: '@cities:{alger}',
-      fields: ['cities', 'name'],
-    },
+    search: '@cities:{alger}',
+    fields: ['cities', 'name'],
   })
 
   doubt['[disk] A precise query give precise results']({
@@ -82,10 +76,8 @@ export default async (doubt, send, client) => {
   })
 
   const [finding_pepeg] = await Disk.GET.User({
-    query: {
-      keys  : [pepeg_id],
-      search: '*',
-    },
+    keys  : [pepeg_id],
+    search: '*',
   })
 
   doubt['[disk] A query with keys give precise results']({
@@ -103,10 +95,8 @@ export default async (doubt, send, client) => {
   }
 
   const [upsert] = await Disk.SET.User({
-    query: {
-      search: '-(Monka)',
-      fields: [],
-    },
+    search  : '-(Monka)',
+    fields  : [],
     document: {
       name: 'Osbert',
       age : 9999999999999999999999999n,
@@ -114,17 +104,13 @@ export default async (doubt, send, client) => {
   })
 
   await Disk.GET.User({
-    query: {
-      search: '@name:Osbert',
-      fields: [],
-    },
+    search: '@name:Osbert',
+    fields: [],
   })
 
   await Disk.SET.User({
-    query: {
-      search: '-(Monka)',
-      fields: [],
-    },
+    search  : '-(Monka)',
+    fields  : [],
     document: {
       name: 'Osbert',
       age : 1n,
@@ -137,10 +123,8 @@ export default async (doubt, send, client) => {
   })
 
   const [osbert] = await Disk.GET.User({
-    query: {
-      search: '@name:Osbert',
-      fields: [],
-    },
+    search: '@name:Osbert',
+    fields: [],
   })
 
   doubt['[disk] Updating pepeg name persists']({
@@ -148,7 +132,7 @@ export default async (doubt, send, client) => {
     is     : pepeg_id,
   })
   doubt['[disk] Deleting users succeeds']({
-    because: await Disk.DELETE.User({ query: { search: '*' } }),
+    because: await Disk.DELETE.User({ search: '*' }),
     is     : [1, 1],
   })
   doubt['[disk] Deleting users persists']({

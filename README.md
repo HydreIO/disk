@@ -210,7 +210,7 @@ const client = redis.createClient({
 When using the disk you must follow this pattern
 
 ```js
-Disk[<operation>][<type>]({ query, document })
+Disk[<operation>][<type>](query)
 ```
 
 - **operation** is one of
@@ -223,24 +223,24 @@ Disk[<operation>][<type>]({ query, document })
   It is used for the collection name (index) and the node namespace.
   A `type User` would yield an `User` redisearch index and `User:<uuid>`
   documents. Basically `FT.ADD User User:xxxx 1 FIELDS ...`
-- **query** is a query option as the following
+- **query** is an option object containing the following
   ```js
-  query: {
+  {
     // array of uuids to use instead of the whole database (INKEYS)
     // if not specified it will use the whole index
-    keys  : [''],
+    keys     : [''],
     // array of field names to use
     // for the query and also return only those (INFIELDS, RETURN)
     // if not specified it will use all fields
-    fields: [''],
-    limit : Infinity, // limit results
-    offset: 0, // paginate
-    search: '' // redisearch query string (https://oss.redislabs.com/redisearch/Query_Syntax/)
+    fields   : [''],
+    limit    : Infinity, // limit results
+    offset   : 0, // paginate
+    search   : '', // redisearch query string (https://oss.redislabs.com/redisearch/Query_Syntax/)
+    // object to use for CREATE and SET operations
+    // it use `REPLACE PARTIAL` for a SET operation
+    document: {}
   }
   ```
-- **document** object to use for CREATE and SET operations
-  - it use `REPLACE PARTIAL` for a SET operation
-
 
 #### CREATE
 
@@ -256,7 +256,7 @@ const uuid = await Disk.CREATE.User({ document: pepeg })
 Delete matching documents from redis (DD)
 
 ```js
-const result = await Disk.DELETE.User({ query: { search: '*' } })
+const result = await Disk.DELETE.User({ search: '*' })
 // result = raw result with an array of 'OK' (converted to `1` by node-redis)
 ```
 
@@ -266,7 +266,7 @@ Return an array of matching keys (NOCONTENT),
 can be used to count element or check for existence
 
 ```js
-const [key1, key2, ...keys] = await Disk.KEYS.User({ query: { search: '*' } })
+const [key1, key2, ...keys] = await Disk.KEYS.User({ search: '*' })
 ```
 
 #### GET
@@ -279,12 +279,10 @@ Return an array of javascript object
 
 ```js
 const Paul = await Disk.GET.User({
-  query: {
     fields: ['name', 'age'],
     search: '@name:Paul',
     limit : 1
-  }
-})
+  })
 ```
 
 #### SET
@@ -293,7 +291,7 @@ Merge a document into all matching results
 
 ```js
 const result = await Disk.SET.User({
-  query   : { search: '*' },
+  search  : '*',
   document: { group : 'communism' }
 })
 // result = raw redis array result (FT.ADD)

@@ -29,7 +29,7 @@ export default ({
   events_name = '__disk__',
 } = {}) => {
   const call = Call(client)
-  const keys = async (namespace, { query } = {}) => {
+  const keys = async (namespace, query) => {
     const [, ...ids] = await call.one([
       build_query(namespace, query),
       'NOCONTENT',
@@ -59,13 +59,14 @@ export default ({
 
       return uuid
     }),
-    GET: proxify(async (namespace, { query }) => {
+    GET: proxify(async (namespace, query) => {
       const [, ...results] = await call.one(build_query(namespace, query))
 
       return Parser.array_result(results)
     }),
-    SET: proxify(async (namespace, { query, document = {} }) => {
-      const ids = await keys(namespace, { query })
+    SET: proxify(async (namespace, query) => {
+      const { document } = query
+      const ids = await keys(namespace, query)
       const head = ['FT.ADD', namespace]
       const tail = [1, 'REPLACE', 'PARTIAL', 'FIELDS', Object.entries(document)]
       const result = await call.many(ids.map(id => [...head, id, ...tail]))
@@ -82,8 +83,8 @@ export default ({
 
       return result
     }),
-    DELETE: proxify(async (namespace, { query }) => {
-      const ids = await keys(namespace, { query })
+    DELETE: proxify(async (namespace, query) => {
+      const ids = await keys(namespace, query)
 
       if (events_enabled) {
         const to_operation = id => [
