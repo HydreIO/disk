@@ -31,7 +31,7 @@ export default async (doubt, send, client) => {
   doubt['[cli] The User schema include all defined search fields']({
     because: user_result[5],
     is     : [
-      ['name', 'type', 'TEXT', 'WEIGHT', '1', 'NOSTEM'],
+      ['name', 'type', 'TAG', 'SEPARATOR', ','],
       ['age', 'type', 'NUMERIC'],
       ['cities', 'type', 'TAG', 'SEPARATOR', ','],
     ],

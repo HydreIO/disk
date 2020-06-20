@@ -8,12 +8,12 @@ export default async (doubt, send, client) => {
     events_name   : 'disk',
   })
   const pepeg = {
-    name   : 'Pepeg',
+    name   : 'Pépeg',
     address: '5th street',
     cities : 'brooklyn,paris,miami',
   }
   const monka = {
-    name   : 'Monka',
+    name   : 'M@nka',
     address: '6th street',
     cities : 'tokyo,paris,alger',
   }
@@ -64,7 +64,7 @@ export default async (doubt, send, client) => {
 
   doubt['[disk] A precise query give precise results']({
     because: finding_alger.name,
-    is     : 'Monka',
+    is     : 'M@nka',
   })
   doubt['[disk] Fields are filtered']({
     because: finding_alger.address,
@@ -82,7 +82,7 @@ export default async (doubt, send, client) => {
 
   doubt['[disk] A query with keys give precise results']({
     because: finding_pepeg.name,
-    is     : 'Pepeg',
+    is     : 'Pépeg',
   })
 
   try {
@@ -94,8 +94,17 @@ export default async (doubt, send, client) => {
     })
   }
 
+  await Disk.SET.User({
+    search  : '-(@name:{M\\@nka})',
+    fields  : [],
+    document: {
+      name: 'Osbert',
+      age : 1n,
+    },
+  })
+
   const [upsert] = await Disk.SET.User({
-    search  : '-(Monka)',
+    search  : '-(@name:{M\\@nka})',
     fields  : [],
     document: {
       name: 'Osbert',
@@ -103,13 +112,15 @@ export default async (doubt, send, client) => {
     },
   })
 
+
   await Disk.GET.User({
-    search: '@name:Osbert',
+    search: '@name:{Osbert}',
     fields: [],
   })
 
+
   await Disk.SET.User({
-    search  : '-(Monka)',
+    search  : '-(@name:{M\\@nka})',
     fields  : [],
     document: {
       name: 'Osbert',
@@ -123,8 +134,7 @@ export default async (doubt, send, client) => {
   })
 
   const [osbert] = await Disk.GET.User({
-    search: '@name:Osbert',
-    fields: [],
+    search: '@name:{Osbert}',
   })
 
   doubt['[disk] Updating pepeg name persists']({

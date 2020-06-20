@@ -1,6 +1,6 @@
 type User @MAXTEXTFIELDS {
   uuid    : ID!
-  name    : String! @TEXT @NOSTEM,
+  name    : String! @TAG,
   age     : Int @NUMERIC
   address : String!
   posts   : [Post!]!
