@@ -33,19 +33,22 @@ const doubt = Doubt({
   timeout: 1000,
 })
 
-await container.start()
-await new Promise(resolve => setTimeout(resolve, 100))
+try {
+  await container.start()
+  await new Promise(resolve => setTimeout(resolve, 100))
 
-const client = redis.createClient()
-const send = util.promisify(client.send_command.bind(client))
+  const client = redis.createClient()
+  const send = util.promisify(client.send_command.bind(client))
 
-await new Promise(resolve => {
-  client.on('ready', resolve)
-})
-await cli_suite(doubt, send, client)
-await disk_suite(doubt, send, client)
-await new Promise(resolve => {
-  client.quit(resolve)
-})
-await container.stop()
-await container.remove()
+  await new Promise(resolve => {
+    client.on('ready', resolve)
+  })
+  await cli_suite(doubt, send, client)
+  await disk_suite(doubt, send, client)
+  await new Promise(resolve => {
+    client.quit(resolve)
+  })
+} finally {
+  await container.stop()
+  await container.remove()
+}

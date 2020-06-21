@@ -112,12 +112,10 @@ export default async (doubt, send, client) => {
     },
   })
 
-
   await Disk.GET.User({
     search: '@name:{Osbert}',
     fields: [],
   })
-
 
   await Disk.SET.User({
     search  : '-(@name:{M\\@nka})',

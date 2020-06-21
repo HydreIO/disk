@@ -38,7 +38,8 @@ const Field = {
 export default {
   parse: schema =>
     parse(schema)
-        .definitions.map(definition => ({
+        .definitions.filter(({ kind }) => kind === 'ObjectTypeDefinition')
+        .map(definition => ({
           index: {
             name   : parse_name(definition),
             options: definition.directives.map(Option.parse),
