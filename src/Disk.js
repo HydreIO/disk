@@ -42,7 +42,8 @@ export default ({
     KEYS  : proxify(keys),
     CREATE: proxify(async (namespace, { document }) => {
       const uuid = `${ namespace }:${ uuid4() }`
-      const entries = Object.entries(document).filter(([, value]) => value !== undefined && value !== null)
+      const filter_nulls = ([, value]) => value !== undefined && value !== null
+      const entries = Object.entries(document).filter(filter_nulls)
 
       await call.one(['FT.ADD', namespace, uuid, 1, 'FIELDS', entries])
       if (events_enabled) {
