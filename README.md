@@ -287,6 +287,8 @@ const Paul = await Disk.GET.User({
 
 #### SET
 
+> Setting a field to `undefined` remove it (HDEL)
+
 Merge a document into all matching results
 
 ```js

@@ -42,15 +42,9 @@ export default ({
     KEYS  : proxify(keys),
     CREATE: proxify(async (namespace, { document }) => {
       const uuid = `${ namespace }:${ uuid4() }`
+      const entries = Object.entries(document).filter(([, value]) => value !== undefined && value !== null)
 
-      await call.one([
-        'FT.ADD',
-        namespace,
-        uuid,
-        1,
-        'FIELDS',
-        Object.entries(document),
-      ])
+      await call.one(['FT.ADD', namespace, uuid, 1, 'FIELDS', entries])
       if (events_enabled) {
         const cmd = ['publish', `${ events_name }:CREATE:${ namespace }`, uuid]
 
@@ -67,8 +61,22 @@ export default ({
     SET: proxify(async (namespace, query) => {
       const { document } = query
       const ids = await keys(namespace, query)
+      const fields_to_delete = new Set()
+      const entries = Object.entries(document).filter(([key, value]) => {
+        if (value === undefined || value === null) {
+          fields_to_delete.add(key)
+          return false
+        }
+
+        return true
+      })
       const head = ['FT.ADD', namespace]
-      const tail = [1, 'REPLACE', 'PARTIAL', 'FIELDS', Object.entries(document)]
+      const tail = [1, 'REPLACE', 'PARTIAL', 'FIELDS', entries]
+      const deletion_values = [...fields_to_delete.values()]
+
+      if (deletion_values.length)
+        await call.many(ids.map(id => ['HDEL', id, ...deletion_values]))
+
       const result = await call.many(ids.map(id => [...head, id, ...tail]))
 
       if (events_enabled) {

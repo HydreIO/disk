@@ -16,6 +16,7 @@ export default async (doubt, send, client) => {
     name   : 'M@nka',
     address: '6th street',
     cities : 'tokyo,paris,alger',
+    foo    : undefined,
   }
   const pepeg_id = await Disk.CREATE.User({ document: pepeg })
 
@@ -25,6 +26,15 @@ export default async (doubt, send, client) => {
   })
 
   const monka_id = await Disk.CREATE.User({ document: monka })
+  const [miss_field] = await Disk.GET.User({
+    search: '@name:{M\\@nka}',
+    limit : 1,
+  })
+
+  doubt['[disk] Undefined fields on creation are ignored']({
+    because: miss_field.foo,
+    is     : undefined,
+  })
 
   doubt['[disk] Creating another document return a different uuid']({
     because: monka_id === pepeg_id,
@@ -139,6 +149,24 @@ export default async (doubt, send, client) => {
     because: osbert.uuid,
     is     : pepeg_id,
   })
+
+  await Disk.SET.User({
+    search  : '@name:{Osbert}',
+    document: {
+      name: 'Osbert',
+      age : undefined,
+    },
+  })
+
+  doubt['[disk] Setting a field to undefined removes it']({
+    because: (
+      await Disk.GET.User({
+        search: '@name:{Osbert}',
+      })
+    )[0].age,
+    is: undefined,
+  })
+
   doubt['[disk] Deleting users succeeds']({
     because: await Disk.DELETE.User({ search: '*' }),
     is     : [1, 1],
