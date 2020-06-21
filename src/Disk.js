@@ -2,12 +2,9 @@ import { v4 as uuid4 } from 'uuid'
 import Parser from './Parser.js'
 import Call from './Call.js'
 
-const search_missing = () => {
-  throw new Error('Missing search field in query')
-}
-const build_query = (
+const complex_query = (
     namespace,
-    { keys, fields, limit = 0, offset = 0, search = search_missing() } = {},
+    { keys, fields, limit = 0, offset = 0, search } = {},
 ) => [
   'FT.SEARCH',
   namespace,
@@ -22,6 +19,11 @@ const proxify = handle =>
   new Proxy(Object.create(null), {
     get: (_, namespace) => payload => handle(namespace, payload),
   })
+const adequate_command = requested_fields => {
+  if (!requested_fields || !requested_fields.length) return 'HGETALL'
+  if (requested_fields.length === 1) return 'HGET'
+  return 'HMGET'
+}
 
 export default ({
   client,
@@ -29,13 +31,28 @@ export default ({
   events_name = '__disk__',
 } = {}) => {
   const call = Call(client)
-  const keys = async (namespace, query) => {
-    const [, ...ids] = await call.one([
-      build_query(namespace, query),
-      'NOCONTENT',
-    ])
+  const keys = async (namespace, query = {}) => {
+    if (query.search) {
+      const [, ...ids] = await call.one([
+        complex_query(namespace, query),
+        'NOCONTENT',
+      ])
 
-    return ids
+      return ids
+    }
+
+    const { keys: search_keys = [], limit = Infinity, offset = 0 } = query
+
+    if (!search_keys.length) {
+      // if no limit we return the whole db
+      const operation = limit === Infinity
+        ? ['KEYS', `${ namespace }:*`]
+        : ['SCAN', offset, 'MATCH', `${ namespace }:*`, limit, 'TYPE', 'hash']
+
+      return call.one(operation)
+    }
+
+    return search_keys.slice(offset, limit)
   }
 
   return {
@@ -45,7 +62,16 @@ export default ({
       const filter_nulls = ([, value]) => value !== undefined && value !== null
       const entries = Object.entries(document).filter(filter_nulls)
 
-      await call.one(['FT.ADD', namespace, uuid, 1, 'FIELDS', entries])
+      await call.one(['HSET', uuid, entries])
+      try {
+        // trying to index manually a created hash (may not have any index)
+        // https://github.com/RediSearch/RediSearch/issues/1287#issuecomment-646511427
+        // we can remove this in the next redisearch version
+        await call.one(['FT.ADD', namespace, uuid, 1, 'FIELDS', entries])
+      } catch {
+        // we don't care if it works or not
+      }
+
       if (events_enabled) {
         const cmd = ['publish', `${ events_name }:CREATE:${ namespace }`, uuid]
 
@@ -55,13 +81,32 @@ export default ({
       return uuid
     }),
     GET: proxify(async (namespace, query) => {
-      const [, ...results] = await call.one(build_query(namespace, query))
+      const find_results = async () => {
+        // presence of search means we can't use regular HMGET
+        if (query.search) {
+          const [, ...results] = await call.one(complex_query(namespace, query))
 
-      return Parser.array_result(results)
+          return results
+        }
+
+        const { keys: skeys = [], fields, limit = Infinity, offset = 0 } = query
+        const command = adequate_command(fields)
+        const commands = skeys
+            .slice(offset, limit)
+            .map(key => [command, key, ...fields])
+
+        if (!commands.length) return []
+        return call.many(commands)
+      }
+
+      return Parser.array_result(await find_results())
     }),
     SET: proxify(async (namespace, query) => {
       const { document } = query
       const ids = await keys(namespace, query)
+
+      if (!ids.length) return []
+
       const fields_to_delete = new Set()
       const entries = Object.entries(document).filter(([key, value]) => {
         if (value === undefined || value === null) {
@@ -71,14 +116,22 @@ export default ({
 
         return true
       })
-      const head = ['FT.ADD', namespace]
-      const tail = [1, 'REPLACE', 'PARTIAL', 'FIELDS', entries]
       const deletion_values = [...fields_to_delete.values()]
 
       if (deletion_values.length)
         await call.many(ids.map(id => ['HDEL', id, ...deletion_values]))
 
-      const result = await call.many(ids.map(id => [...head, id, ...tail]))
+      const make_result = () => {
+        if (query.search) {
+          const head = ['FT.ADD', namespace]
+          const tail = [1, 'REPLACE', 'PARTIAL', 'FIELDS', entries]
+
+          return call.many(ids.map(id => [...head, id, ...tail]))
+        }
+
+        return call.many(ids.map(id => ['HSET', id, entries]))
+      }
+      const result = await make_result()
 
       if (events_enabled) {
         const to_operation = id => [
@@ -95,6 +148,7 @@ export default ({
     DELETE: proxify(async (namespace, query) => {
       const ids = await keys(namespace, query)
 
+      if (!ids.length) return []
       if (events_enabled) {
         const to_operation = id => [
           'publish',
@@ -105,7 +159,16 @@ export default ({
         await call.many(ids.map(to_operation))
       }
 
-      return call.many(ids.map(id => ['FT.DEL', namespace, id, 'DD']))
+      try {
+        // trying to index manually a created hash (may not have any index)
+        // https://github.com/RediSearch/RediSearch/issues/1287#issuecomment-646511427
+        // we can remove this in the next redisearch version
+        await call.many(ids.map(id => ['FT.DEL', namespace, id]))
+      } catch {
+        // we don't care if it works or not
+      }
+
+      return call.one(['DEL', ...ids])
     }),
   }
 }

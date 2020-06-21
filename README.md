@@ -22,7 +22,6 @@
   - [Schema](#schema)
   - [With Node](#with-node)
     - [CREATE](#create)
-    - [DELETE](#delete)
     - [KEYS](#keys)
     - [GET](#get)
     - [SET](#set)
@@ -213,6 +212,11 @@ When using the disk you must follow this pattern
 Disk[<operation>][<type>](query)
 ```
 
+You may often only need to retrieve documents by ids, to allow
+for better performance Disk is only using redisearch if you include
+the `search` option. When it is not specified it only use regular
+`HSET` and `HMGET` commands.
+
 - **operation** is one of
   - `CREATE`
   - `DELETE`
@@ -244,16 +248,14 @@ Disk[<operation>][<type>](query)
 
 #### CREATE
 
+> Creating a document execute a regular HSET and then try to index
+> it in redisearch, because we may not want an index for every types.
+
 Create will generate an uuid v4 and use it with the type as a namespace
 
 ```js
 const uuid = await Disk.CREATE.User({ document: pepeg })
 // User:xxxx-xxxx-xxx..
-```
-
-#### DELETE
-
-Delete matching documents from redis (DD)
 
 ```js
 const result = await Disk.DELETE.User({ search: '*' })
@@ -262,6 +264,11 @@ const result = await Disk.DELETE.User({ search: '*' })
 
 #### KEYS
 
+```
+
+#### DELETE
+
+Delete matching documents from redis (DD)
 Return an array of matching keys (NOCONTENT),
 can be used to count element or check for existence
 

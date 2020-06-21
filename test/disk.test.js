@@ -45,7 +45,7 @@ export default async (doubt, send, client) => {
     is     : 0,
   })
   doubt['[disk] Keys give back 2 uuids']({
-    because: (await Disk.KEYS.User({ search: '*' })).length,
+    because: (await Disk.KEYS.User()).length,
     is     : 2,
   })
   doubt['[disk] Keys limited to 1 give back 1 uuids']({
@@ -94,15 +94,6 @@ export default async (doubt, send, client) => {
     because: finding_pepeg.name,
     is     : 'Pépeg',
   })
-
-  try {
-    await Disk.KEYS.User()
-  } catch (error) {
-    doubt['[disk] Querying without a search string throws an error']({
-      because: error.message,
-      is     : 'Missing search field in query',
-    })
-  }
 
   await Disk.SET.User({
     search  : '-(@name:{M\\@nka})',
@@ -169,7 +160,7 @@ export default async (doubt, send, client) => {
 
   doubt['[disk] Deleting users succeeds']({
     because: await Disk.DELETE.User({ search: '*' }),
-    is     : [1, 1],
+    is     : 2,
   })
   doubt['[disk] Deleting users persists']({
     because: await send('SCAN', [0, 'MATCH', 'User:*']),
