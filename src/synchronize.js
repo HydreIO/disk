@@ -1,7 +1,7 @@
 import Ast from './Ast.js'
 import Call from './Call.js'
 
-export default async (client, schema, scan_count, logger = true) => {
+export default async (client, schema, limit, logger = true) => {
   if (!schema) throw new Error('No schema was provided')
 
   const call = Call(client)
@@ -10,8 +10,8 @@ export default async (client, schema, scan_count, logger = true) => {
   const log = (...msgs) => {
     if (logger) console.log(...msgs)
   }
-  const index_hashes = async (namespace, cursor, count) => {
-    const query = ['SCAN', cursor, 'MATCH', `${ namespace }:*`, 'COUNT', count]
+  const index_hashes = async (namespace, cursor) => {
+    const query = ['SCAN', cursor, 'MATCH', `${ namespace }:*`]
     const [next_cursor, documents] = await call.one(query)
 
     if (documents.length) {
@@ -31,7 +31,7 @@ export default async (client, schema, scan_count, logger = true) => {
     ]
 
     await call.many(documents.map(serialize))
-    if (+next_cursor) await index_hashes(namespace, next_cursor, count)
+    if (+next_cursor) await index_hashes(namespace, +next_cursor)
   }
 
   log('Synchronizing schema..')
@@ -45,9 +45,9 @@ export default async (client, schema, scan_count, logger = true) => {
       await call.one(['FT.INFO', name])
       log(`[${ name }] Already exist, skipping..`)
     } catch {
-      log(`[${ name }] Creating.. (batch: ${ scan_count })`)
+      log(`[${ name }] Creating..`)
       await call.one(Ast.serialize(ast))
-      await index_hashes(name, 0, scan_count)
+      await index_hashes(name, 0)
     }
   }
 }

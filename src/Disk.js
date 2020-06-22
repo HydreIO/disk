@@ -45,11 +45,20 @@ export default ({
 
     if (!search_keys.length) {
       // if no limit we return the whole db
-      const operation = limit === Infinity
-        ? ['KEYS', `${ namespace }:*`]
-        : ['SCAN', offset, 'MATCH', `${ namespace }:*`, limit, 'TYPE', 'hash']
+      if (limit === Infinity) return call.one(['KEYS', `${ namespace }:*`])
 
-      return call.one(operation)
+      const scan_database = async (cursor, all = []) => {
+        const operation = ['SCAN', cursor, 'MATCH', `${ namespace }:*`]
+        const [next_cursor, scan_keys] = await call.one(operation)
+        const concat = [...all, ...scan_keys]
+
+        if (concat.length >= limit) return concat.slice(0, limit)
+        if (+next_cursor) return scan_database(+next_cursor, concat)
+
+        return concat
+      }
+
+      return scan_database(0)
     }
 
     return search_keys.slice(offset, limit)
@@ -81,27 +90,36 @@ export default ({
       return uuid
     }),
     GET: proxify(async (namespace, query) => {
-      const find_results = async () => {
-        // presence of search means we can't use regular HMGET
-        if (query.search) {
-          const [, ...results] = await call.one(complex_query(namespace, query))
+      // presence of search means we can't use regular HMGET
+      if (query.search) {
+        const [, ...results] = await call.one(complex_query(namespace, query))
 
-          return results
-        }
-
-        const { keys: skeys = [], fields, limit = Infinity, offset = 0 } = query
-        const command = adequate_command(fields)
-        const commands = skeys
-            .slice(offset, limit)
-            .map(key => [command, key, ...fields])
-
-        if (!commands.length) return []
-        return call.many(commands)
+        return Parser.array_result(results)
       }
 
-      return Parser.array_result(await find_results())
+      const { keys: skeys = [], fields, limit = Infinity, offset = 0 } = query
+      const command = adequate_command(fields)
+      const commands = skeys
+          .slice(offset, limit)
+          .map(key => [command, key, ...fields?.length ? fields : []])
+
+      if (!commands.length) return []
+
+      const results = await call.many(commands)
+
+      if (command === 'HGETALL')
+        // seems that the redis client already map HGETALL to an object
+        return results
+      if (command === 'HGET')
+        // HGET returns a direct value response
+        return results.map(result => ({ [fields[0]]: result }))
+
+      // HMGET return an array response
+      const to_entry = (value, i) => [fields[i], Parser.value(value)]
+
+      return results.map(values => Object.fromEntries(values.map(to_entry)))
     }),
-    SET: proxify(async (namespace, query) => {
+    SET: proxify(async (namespace, query = {}) => {
       const { document } = query
       const ids = await keys(namespace, query)
 
@@ -148,7 +166,7 @@ export default ({
     DELETE: proxify(async (namespace, query) => {
       const ids = await keys(namespace, query)
 
-      if (!ids.length) return []
+      if (!ids.length) return 0
       if (events_enabled) {
         const to_operation = id => [
           'publish',

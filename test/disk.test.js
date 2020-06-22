@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import Mount from '../src/Disk.js'
 import Call from '../src/Call.js'
 
@@ -19,6 +20,87 @@ export default async (doubt, send, client) => {
     foo    : undefined,
   }
   const pepeg_id = await Disk.CREATE.User({ document: pepeg })
+  const frog = await Disk.CREATE.Frog({ document: { name: 'Frog' } })
+
+  doubt['[disk] Creating a document without schema use regular cmds']({
+    because: frog.startsWith('Frog:'),
+    is     : true,
+  })
+  doubt['[disk] Keys of a schemaless type can be queried']({
+    because: await Disk.KEYS.Frog(),
+    is     : [frog],
+  })
+  for (const index of new Array(10).keys()) {
+    await Disk.CREATE.Plane({
+      document: {
+        can: 'fly',
+        index,
+      },
+    })
+  }
+
+  doubt['[disk] Keys of a schemaless type can be queried with a limit (less)']({
+    because: (await Disk.KEYS.Plane({ limit: 30 })).length,
+    is     : 10,
+  })
+  for (const index of new Array(100).keys()) {
+    await Disk.CREATE.Plane({
+      document: {
+        can: 'fly',
+        index,
+      },
+    })
+  }
+
+  doubt['[disk] Keys of a schemaless type can be queried with a limit (more)']({
+    because: (await Disk.KEYS.Plane({ limit: 30 })).length,
+    is     : 30,
+  })
+  doubt['[disk] Fields of a schemaless type can be set']({
+    because: await Disk.SET.Frog({
+      keys    : [frog],
+      document: { name: 'Froggy' },
+    }),
+    is: [0],
+  })
+  doubt['[disk] Fields of a schemaless type can be queried (HGETALL)']({
+    because: await Disk.GET.Frog({
+      keys : [frog, frog],
+      limit: 1,
+    }),
+    is: [{ name: 'Froggy' }],
+  })
+  doubt['[disk] Fields of a schemaless type can be queried (HGET)']({
+    because: await Disk.GET.Frog({
+      keys  : [frog],
+      fields: ['name'],
+    }),
+    is: [{ name: 'Froggy' }],
+  })
+  doubt['[disk] Fields of a schemaless type can be queried (HMGET)']({
+    because: await Disk.GET.Frog({
+      keys  : [frog],
+      fields: ['name', 'age'],
+    }),
+    is: [
+      {
+        name: 'Froggy',
+        age : undefined,
+      },
+    ],
+  })
+  doubt['[disk] a schemaless type can be deleted']({
+    because: await Disk.DELETE.Frog(),
+    is     : 1,
+  })
+  doubt['[disk] deleting empty results return 0']({
+    because: await Disk.DELETE.Frog(),
+    is     : 0,
+  })
+  doubt['[disk] set empty results return []']({
+    because: await Disk.SET.Frog(),
+    is     : [],
+  })
 
   doubt['[disk] Creating a document return an uuid']({
     because: typeof pepeg_id,
@@ -163,8 +245,8 @@ export default async (doubt, send, client) => {
     is     : 2,
   })
   doubt['[disk] Deleting users persists']({
-    because: await send('SCAN', [0, 'MATCH', 'User:*']),
-    is     : ['0', []],
+    because: await send('KEYS', ['User:*']),
+    is     : [],
   })
 
   const call = Call(client)

@@ -9,6 +9,7 @@ const chunk = (array, size) => {
 const Parser = {
   value: value => {
     // as value come from redis it'll always be a string
+    if (value === null) return undefined
     if (value === 'true') return true
     if (value === 'false') return false
     try {

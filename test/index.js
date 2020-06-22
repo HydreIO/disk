@@ -29,7 +29,7 @@ const container = await docker.createContainer({
 const doubt = Doubt({
   stdout: through,
   title : 'Disk',
-  calls : 30,
+  calls : 41,
 })
 
 try {

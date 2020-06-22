@@ -57,13 +57,12 @@ and reindex all hashes uppon changes. Use it manually or through your CI
 > allow you to remove any trace of configuration mapping.
 
 ```sh
-hydre-disk --file ./schema.gql --scan-count 1000
+hydre-disk --file ./schema.gql
 ```
 
 | flag | default value | description |
 | --- | ---|---|
 | `--file` | Error (mandatory) | direct path to a graphql schema file which contain your types |
-| `--scan-count` | `100` | `COUNT` using while scanning redis for keys when reindexing hashes in an updated indexe @see https://redis.io/commands/scan|
 | `--redis` | `'redis://localhost:6379'` | redis url |
 
 Synchronization steps (current version)
@@ -84,7 +83,7 @@ Synchronization steps (current version)
 6. If the index doesn't exist, the ast is serialized into a `FT.CREATE` command
    and executed for the `type` (see examples below)
 7. After creating the index, the hashes are reindexed serialy with `FT.ADDHASH`
-   with a `SCAN <cursor> MATCH <namespace:*> COUNT <scan-count>`
+   with a `SCAN <cursor> MATCH <namespace:*>`
    - `namespace` is the graphql `type` name, which is also the index name
 
 > WARN: Reindexed hashes will loose their document `WEIGHTS`, the scope of this tool

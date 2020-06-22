@@ -13,7 +13,6 @@ const cmd                   = process.argv
 const of                    = f => cmd.findIndex(x => x === f)
 const flag                  = i => i === -1 ? undefined : cmd[i+1]
 const file                  = flag(of('--file'))
-const count                 = flag(of('--scan-count')) ?? 100
 const redis_url             = flag(of('--redis')) ?? 'redis://localhost:6379'
 const schema                = readFileSync(file, 'utf-8')
 
@@ -27,5 +26,5 @@ const client = redis.createClient({
   },
 })
 
-await sync(client, schema, count)
+await sync(client, schema, limit)
 process.exit(0)
