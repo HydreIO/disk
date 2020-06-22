@@ -17,10 +17,19 @@ const complex_query = (
 ]
 const proxify = handle =>
   new Proxy(Object.create(null), {
-    get: (_, namespace) => payload => handle(namespace, payload),
+    get: (_, namespace) => query => {
+      if (query?.fields) {
+        // we always want the uuid inside a result
+        query.fields = [...new Set([...query.fields, 'uuid']).values()]
+      }
+
+      return handle(namespace, query)
+    },
   })
 const adequate_command = requested_fields => {
-  if (!requested_fields || !requested_fields.length) return 'HGETALL'
+  // no need to check if the array length is 0 because
+  // as we always force include the `uuid`, it can never be 0
+  if (!requested_fields) return 'HGETALL'
   if (requested_fields.length === 1) return 'HGET'
   return 'HMGET'
 }
@@ -68,6 +77,9 @@ export default ({
     KEYS  : proxify(keys),
     CREATE: proxify(async (namespace, { document }) => {
       const uuid = `${ namespace }:${ uuid4() }`
+
+      document.uuid = uuid
+
       const filter_nulls = ([, value]) => value !== undefined && value !== null
       const entries = Object.entries(document).filter(filter_nulls)
 

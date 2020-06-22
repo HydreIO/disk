@@ -52,6 +52,25 @@ export default async (doubt, send, client) => {
     })
   }
 
+  const [a_plane_key] = await Disk.KEYS.Plane({ limit: 1 })
+
+  await Disk.SET.Plane({
+    keys    : [a_plane_key],
+    document: { index: 999999999999999999n },
+  })
+
+  doubt['[disk] Number is converted']({
+    because: await Disk.GET.Plane({
+      keys  : [a_plane_key],
+      fields: ['index'],
+    }),
+    is: [
+      {
+        index: 999999999999999999n,
+        uuid : a_plane_key,
+      },
+    ],
+  })
   doubt['[disk] Keys of a schemaless type can be queried with a limit (more)']({
     because: (await Disk.KEYS.Plane({ limit: 30 })).length,
     is     : 30,
@@ -68,14 +87,19 @@ export default async (doubt, send, client) => {
       keys : [frog, frog],
       limit: 1,
     }),
-    is: [{ name: 'Froggy' }],
+    is: [
+      {
+        name: 'Froggy',
+        uuid: frog,
+      },
+    ],
   })
   doubt['[disk] Fields of a schemaless type can be queried (HGET)']({
     because: await Disk.GET.Frog({
       keys  : [frog],
-      fields: ['name'],
+      fields: [],
     }),
-    is: [{ name: 'Froggy' }],
+    is: [{ uuid: frog }],
   })
   doubt['[disk] Fields of a schemaless type can be queried (HMGET)']({
     because: await Disk.GET.Frog({
@@ -86,6 +110,7 @@ export default async (doubt, send, client) => {
       {
         name: 'Froggy',
         age : undefined,
+        uuid: frog,
       },
     ],
   })
@@ -117,7 +142,6 @@ export default async (doubt, send, client) => {
     because: miss_field.foo,
     is     : undefined,
   })
-
   doubt['[disk] Creating another document return a different uuid']({
     because: monka_id === pepeg_id,
     is     : false,
