@@ -124,12 +124,17 @@ export default ({
         return results
       if (command === 'HGET')
         // HGET returns a direct value response
-        return results.map(result => ({ [fields[0]]: result }))
+        return results.filter(x => !!x).map(result => ({ [fields[0]]: result }))
 
-      // HMGET return an array response
+      // HMGET return an array response of values
       const to_entry = (value, i) => [fields[i], Parser.value(value)]
 
-      return results.map(values => Object.fromEntries(values.map(to_entry)))
+      return (
+        results
+        // filtering out not found documents
+            .filter(values => !values.every(x => x === null))
+            .map(values => Object.fromEntries(values.map(to_entry)))
+      )
     }),
     SET: proxify(async (namespace, query = {}) => {
       const { document } = query

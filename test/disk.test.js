@@ -126,6 +126,13 @@ export default async (doubt, send, client) => {
     because: await Disk.SET.Frog(),
     is     : [],
   })
+  doubt['[disk] get an non existing document return []']({
+    because: await Disk.GET.Empty({
+      keys  : ['yo'],
+      fields: ['name'],
+    }),
+    is: [],
+  })
 
   doubt['[disk] Creating a document return an uuid']({
     because: typeof pepeg_id,
