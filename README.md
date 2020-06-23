@@ -192,8 +192,8 @@ here is a example of connexion retry backoff client
 
 ```js
 const client = new Redis({
-  host          : 'redis://localhost:6379',
-  retry_strategy: ({ attempt, error }) => {
+  host         : 'redis://localhost:6379',
+  retryStrategy: attempt => {
     if (attempt > 10)
       return new Error(`Can't connect to redis after ${ attempt } tries..`)
     return 250 * 2 ** attempt
