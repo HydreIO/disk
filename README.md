@@ -161,27 +161,23 @@ FT.CREATE Post STOPWORDS "i" "know" "right" SCHEMA date NUMERIC text TEXT WEIGHT
 
 ### With Node
 
-Add these commands to `node-redis` and provide your client
+The master client will be used for write operations,
+and the slave client will be used to read.
 
 ```js
-import redis from 'redis'
-import Mount from '@hydre/disk'
+import Redis  from 'ioredis'
+import Mount  from '@hydre/disk'
+import events from 'events'
 
-redis.addCommand('FT.ADD')
-redis.addCommand('FT.SEARCH')
-redis.addCommand('FT.CREATE')
-redis.addCommand('FT.DEL')
-
-const client = redis.createClient()
+const master = new Redis()
 const Disk   = Mount({
-  client,
+  master_client : master,
+  slave_client  : master,
   events_enabled: true,
   events_name   : '__disk__',
 })
 
-await new Promise(resolve => {
-  client.on('ready', resolve)
-})
+await events.once(client, 'ready')
 ```
 
 If events are enabled Disk will publish to redis every CREATE, SET, and DELETE
@@ -195,8 +191,8 @@ which you can listen all through `PSUBSCRIBE __disk__:*:*`
 here is a example of connexion retry backoff client
 
 ```js
-const client = redis.createClient({
-  url           : 'redis://localhost:6379',
+const client = new Redis({
+  host          : 'redis://localhost:6379',
   retry_strategy: ({ attempt, error }) => {
     if (attempt > 10)
       return new Error(`Can't connect to redis after ${ attempt } tries..`)

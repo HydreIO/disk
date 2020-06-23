@@ -4,7 +4,8 @@ import Call from '../src/Call.js'
 
 export default async (doubt, send, client) => {
   const Disk = Mount({
-    client,
+    master_client : client,
+    slave_client  : client,
     events_enabled: true,
     events_name   : 'disk',
   })
@@ -80,7 +81,7 @@ export default async (doubt, send, client) => {
       keys    : [frog],
       document: { name: 'Froggy' },
     }),
-    is: [0],
+    is: [],
   })
   doubt['[disk] Fields of a schemaless type can be queried (HGETALL)']({
     because: await Disk.GET.Frog({
@@ -295,9 +296,9 @@ export default async (doubt, send, client) => {
   try {
     call.foo()
     await call.many([['HMGET']])
-  } catch ({ errors }) {
+  } catch ({ previousErrors }) {
     doubt['[disk] Call method allows simple error catching']({
-      because: errors[0].message,
+      because: previousErrors[0].message,
       is     : `ERR wrong number of arguments for 'hmget' command`,
     })
   }

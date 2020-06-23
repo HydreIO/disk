@@ -35,11 +35,12 @@ const adequate_command = requested_fields => {
 }
 
 export default ({
-  client,
+  master_client,
+  slave_client,
   events_enabled = false,
   events_name = '__disk__',
 } = {}) => {
-  const call = Call(client)
+  const call = Call(master_client, slave_client)
   const keys = async (namespace, query = {}) => {
     if (query.search) {
       const [, ...ids] = await call.one([
@@ -94,7 +95,7 @@ export default ({
       }
 
       if (events_enabled) {
-        const cmd = ['publish', `${ events_name }:CREATE:${ namespace }`, uuid]
+        const cmd = ['PUBLISH', `${ events_name }:CREATE:${ namespace }`, uuid]
 
         await call.one(cmd)
       }
@@ -121,7 +122,7 @@ export default ({
 
       if (command === 'HGETALL')
         // seems that the redis client already map HGETALL to an object
-        return results
+        return results.map(Parser.node)
       if (command === 'HGET')
         // HGET returns a direct value response
         return results.filter(x => !!x).map(result => ({ [fields[0]]: result }))
@@ -170,7 +171,7 @@ export default ({
 
       if (events_enabled) {
         const to_operation = id => [
-          'publish',
+          'PUBLISH',
           `${ events_name }:SET:${ namespace }`,
           id,
         ]
@@ -186,7 +187,7 @@ export default ({
       if (!ids.length) return 0
       if (events_enabled) {
         const to_operation = id => [
-          'publish',
+          'PUBLISH',
           `${ events_name }:DELETE:${ namespace }`,
           id,
         ]

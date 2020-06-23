@@ -3,11 +3,7 @@
 
 import { readFileSync } from 'fs'
 import sync             from '../src/synchronize.js'
-import redis            from 'redis'
-
-redis.addCommand('FT.ADDHASH')
-redis.addCommand('FT.INFO')
-redis.addCommand('FT.CREATE')
+import Redis            from 'ioredis'
 
 const cmd                   = process.argv
 const of                    = f => cmd.findIndex(x => x === f)
@@ -18,9 +14,9 @@ const schema                = readFileSync(file, 'utf-8')
 
 if (!file) throw new Error('Please provide a schema with the --file flag')
 
-const client = redis.createClient({
-  url           : redis_url,
-  retry_strategy: ({ attempt }) => {
+const client = new Redis({
+  host         : redis_url,
+  retryStrategy: attempt => {
     if (attempt > 10) return new Error(`Can't connect to redis after ${ attempt } tries..`)
     return 250 * 2 ** attempt
   },
