@@ -22,6 +22,7 @@
   - [Schema](#schema)
   - [With Node](#with-node)
     - [CREATE](#create)
+    - [DELETE](#delete)
     - [KEYS](#keys)
     - [GET](#get)
     - [SET](#set)
@@ -251,19 +252,19 @@ Create will generate an uuid v4 and use it with the type as a namespace
 ```js
 const uuid = await Disk.CREATE.User({ document: pepeg })
 // User:xxxx-xxxx-xxx..
-
-```js
-const result = await Disk.DELETE.User({ search: '*' })
-// result = raw result with an array of 'OK' (converted to `1` by node-redis)
-```
-
-#### KEYS
-
 ```
 
 #### DELETE
 
 Delete matching documents from redis (DD)
+
+```js
+const result = await Disk.DELETE.User({ search: '*' })
+// result = raw result with an array of 'OK'
+```
+
+#### KEYS
+
 Return an array of matching keys (NOCONTENT),
 can be used to count element or check for existence
 
