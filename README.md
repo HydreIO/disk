@@ -178,7 +178,7 @@ const Disk   = Mount({
   events_name   : '__disk__',
 })
 
-await events.once(client, 'ready')
+await events.once(master, 'ready')
 ```
 
 If events are enabled Disk will publish to redis every CREATE, SET, and DELETE
