@@ -10,9 +10,7 @@ const complex_query = (
   namespace,
   search,
   ...keys ? ['INKEYS', keys.length, keys] : [],
-  ...fields?.length
-    ? ['INFIELDS', fields.length, fields, 'RETURN', fields.length, fields]
-    : [],
+  ...fields?.length ? ['RETURN', fields.length, fields] : [],
   ...limit > 0 ? ['LIMIT', offset, Math.max(1, limit)] : [],
 ]
 const proxify = handle =>

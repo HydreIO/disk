@@ -229,9 +229,8 @@ the `search` option. When it is not specified it only use regular
     // array of uuids to use instead of the whole database (INKEYS)
     // if not specified it will use the whole index
     keys     : [''],
-    // array of field names to use
-    // for the query and also return only those (INFIELDS, RETURN)
-    // if not specified it will use all fields
+    // array of field names to return
+    // if not specified it will return all fields
     fields   : [''],
     limit    : Infinity, // limit results
     offset   : 0, // paginate
