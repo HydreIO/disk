@@ -110,14 +110,19 @@ export default ({
         return Parser.array_result(results)
       }
 
-      const { keys: skeys = [], fields, limit = Infinity, offset = 0 } = query
+      /* c8 ignore next 13 */
+      // this is actually covered but c8 doesn't pick it because of the
+      // await keys, weird
+      const {
+        keys: skeys = await keys(namespace, query),
+        fields,
+        limit = Infinity,
+        offset = 0,
+      } = query
       const command = adequate_command(fields)
       const commands = skeys
           .slice(offset, limit)
           .map(key => [command, key, ...fields?.length ? fields : []])
-
-      if (!commands.length) return []
-
       const results = await call.many(commands)
 
       if (command === 'HGETALL')
