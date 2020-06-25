@@ -13,7 +13,7 @@ const complex_query = (
   ...fields?.length
     ? ['INFIELDS', fields.length, fields, 'RETURN', fields.length, fields]
     : [],
-  ...limit > 0 ? ['LIMIT', offset, Math.min(1, limit)] : [],
+  ...limit > 0 ? ['LIMIT', offset, Math.max(1, limit)] : [],
 ]
 const proxify = handle =>
   new Proxy(Object.create(null), {
