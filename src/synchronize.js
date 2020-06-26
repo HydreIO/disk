@@ -1,7 +1,7 @@
 import Ast from './Ast.js'
 import Call from './Call.js'
 
-export default async (client, schema, limit, logger = true) => {
+export default async ({ client, schema, logger, overwrite }) => {
   if (!schema) throw new Error('No schema was provided')
 
   const call = Call(client)
@@ -43,9 +43,13 @@ export default async (client, schema, limit, logger = true) => {
     log(`[${ name }] processing..`)
     try {
       await call.one(['FT.INFO', name])
-      log(`[${ name }] Already exist, skipping..`)
+      if (overwrite) {
+        log(`[${ name }] Removing existing index..`)
+        await call.one(['FT.DROP', name, 'KEEPDOCS'])
+        throw 0
+      } else log(`[${ name }] Already exist, skipping..`)
     } catch {
-      log(`[${ name }] Creating..`)
+      log(`[${ name }] Creating index..`)
       await call.one(Ast.serialize(ast))
       await index_hashes(name, 0)
     }

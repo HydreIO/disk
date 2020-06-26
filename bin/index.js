@@ -9,7 +9,8 @@ const cmd                   = process.argv
 const of                    = f => cmd.findIndex(x => x === f)
 const flag                  = i => i === -1 ? undefined : cmd[i+1]
 const file                  = flag(of('--file'))
-const redis_url             = flag(of('--redis')) ?? 'redis://localhost:6379'
+const overwrite             = of('--sync')        !== -1
+const redis_url             = flag(of('--redis')) ?? '127.0.0.1'
 const schema                = readFileSync(file, 'utf-8')
 
 if (!file) throw new Error('Please provide a schema with the --file flag')
@@ -22,5 +23,11 @@ const client = new Redis({
   },
 })
 
-await sync(client, schema, limit)
+await sync({
+  client,
+  schema,
+  logger: true,
+  overwrite,
+})
+
 process.exit(0)

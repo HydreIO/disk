@@ -65,6 +65,7 @@ hydre-disk --file ./schema.gql
 | --- | ---|---|
 | `--file` | Error (mandatory) | direct path to a graphql schema file which contain your types |
 | `--redis` | `'redis://localhost:6379'` | redis url |
+| `--sync` |  | if an index exist it will be dropped and recreated to allow reindexing
 
 Synchronization steps (current version)
 
@@ -72,15 +73,8 @@ Synchronization steps (current version)
 2. The graphql ast is parsed into a hydre/disk ast
 3. Each graphql `type` definition represent a redisearch index
 4. `FT.INFO` is used to check for index existence
-5. If the index exist we skip it >> _go to 3_
-   - this step is subject to evolve but in the current version of the tool
-  you will have to manually drop an index in order to let `hydre-disk`
-  create it and reindex existing hashes (which is pretty fast anyway).
-   - The cli just provide some help for creation and reindexing but
-  if you are an experienced redis user you absolutely can `FT.ALTER` and
-  reindex existing hashes yourself
-   - Skipping existing index also allows to run the cli without risking
-  any flaws
+5. If the index exist we skip it (unless --sync is passed) >> _go to 3_
+   - when `--sync` is passed, any found index will be deleted `FT.DROP idx KEEPDOCS`
 6. If the index doesn't exist, the ast is serialized into a `FT.CREATE` command
    and executed for the `type` (see examples below)
 7. After creating the index, the hashes are reindexed serialy with `FT.ADDHASH`

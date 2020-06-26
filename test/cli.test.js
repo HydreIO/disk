@@ -13,7 +13,10 @@ export default async (doubt, send, client) => {
 
   const schema = readFileSync('./test/schema.gql', 'utf-8')
 
-  await sync(client, schema, 10, false)
+  await sync({
+    client,
+    schema,
+  })
 
   const user_result = await send('FT.INFO', ['User'])
   const post_result = await send('FT.INFO', ['Post'])
@@ -55,7 +58,10 @@ export default async (doubt, send, client) => {
     is     : ['i', 'know', 'right'],
   })
 
-  await sync(client, schema, 10, false)
+  await sync({
+    client,
+    schema,
+  })
 
   doubt[`[cli] Running the sync again doesn't change anything`]({
     because: (await send('FT.INFO', ['User'])).length,
@@ -80,7 +86,11 @@ export default async (doubt, send, client) => {
     is     : '1sceat',
   })
 
-  await sync(client, schema, 10, false)
+  await sync({
+    client,
+    schema,
+    overwrite: true,
+  })
 
   doubt['[cli] We indexed again, we can now query the hash']({
     because: await send('FT.SEARCH', ['Post', '5sce*']),
